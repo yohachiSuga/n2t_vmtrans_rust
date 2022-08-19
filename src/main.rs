@@ -17,11 +17,16 @@ struct Args {
     input: String,
     #[clap(short)]
     out: String,
+    #[clap(short)]
+    debug: bool,
 }
 
-fn compile<W: Write>(inputs: Vec<String>, output: &mut CodeWriter<W>) {
-    // TODO: remove later
-    // output.debug();
+fn compile<W: Write>(inputs: Vec<String>, output: &mut CodeWriter<W>, debug: bool) {
+    // only for debugging to init Stack Pointer
+    if debug {
+        output.debug();
+    }
+
     for f in inputs {
         let mut parser = parser::Parser::new(&f);
 
@@ -88,7 +93,7 @@ fn main() {
     let file = File::create(args.out).unwrap();
     let mut writer = BufWriter::new(file);
     let mut writer = writer::CodeWriter::new(writer);
-    compile(files, &mut writer);
+    compile(files, &mut writer, args.debug);
 }
 
 #[cfg(test)]

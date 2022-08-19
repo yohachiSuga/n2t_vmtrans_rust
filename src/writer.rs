@@ -172,9 +172,9 @@ M=D
 M=M+1
 ";
 
-static EQ_RET_TRUE: &str = "RETURNTRUE";
-static EQ_RET_FALSE: &str = "RETURNFALSE";
-static EQ_RET_END: &str = "RETURNEND";
+static RET_TRUE_LABEL: &str = "RETURNTRUE";
+static RET_FALSE_LABEL: &str = "RETURNFALSE";
+static RET_END_LABEL: &str = "RETURNEND";
 pub struct CodeWriter<W: std::io::Write> {
     f: BufWriter<W>,
     logical_op_count: usize,
@@ -241,9 +241,9 @@ impl<W: std::io::Write> CodeWriter<W> {
         } else if command == "eq" {
             self.logical_op_count += 1;
             let replaced_eq_asm = self.replace_logical_op(
-                EQ_RET_TRUE,
-                EQ_RET_FALSE,
-                EQ_RET_END,
+                RET_TRUE_LABEL,
+                RET_FALSE_LABEL,
+                RET_END_LABEL,
                 command,
                 EQ_CONST_ASM,
             );
@@ -251,9 +251,9 @@ impl<W: std::io::Write> CodeWriter<W> {
         } else if command == "lt" {
             self.logical_op_count += 1;
             let replaced_eq_asm = self.replace_logical_op(
-                EQ_RET_TRUE,
-                EQ_RET_FALSE,
-                EQ_RET_END,
+                RET_TRUE_LABEL,
+                RET_FALSE_LABEL,
+                RET_END_LABEL,
                 command,
                 LT_CONST_ASM,
             );
@@ -261,9 +261,9 @@ impl<W: std::io::Write> CodeWriter<W> {
         } else if command == "gt" {
             self.logical_op_count += 1;
             let replaced_eq_asm = self.replace_logical_op(
-                EQ_RET_TRUE,
-                EQ_RET_FALSE,
-                EQ_RET_END,
+                RET_TRUE_LABEL,
+                RET_FALSE_LABEL,
+                RET_END_LABEL,
                 command,
                 GT_CONST_ASM,
             );
