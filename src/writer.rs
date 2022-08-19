@@ -91,6 +91,24 @@ M=D
 M=M+1
 ";
 
+static PUSH_STATIC_AMS: &str = "
+@{}
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+";
+
+static POP_STATIC_AMS: &str = "
+@SP
+AM=M-1
+D=M
+@{}
+M=D
+";
+
 static EQ_CONST_ASM: &str = "
 @SP
 AM=M-1
@@ -178,6 +196,7 @@ static RET_END_LABEL: &str = "RETURNEND";
 pub struct CodeWriter<W: std::io::Write> {
     f: BufWriter<W>,
     logical_op_count: usize,
+    filename: String,
 }
 
 static INIT: &str = "
@@ -193,11 +212,12 @@ impl<W: std::io::Write> CodeWriter<W> {
         CodeWriter {
             f: output,
             logical_op_count: 0,
+            filename: String::new(),
         }
     }
 
     pub fn setFileName(&mut self, filename: &str) {
-        todo!()
+        self.filename = filename.to_string();
     }
 
     pub fn debug(&mut self) {
@@ -277,9 +297,19 @@ impl<W: std::io::Write> CodeWriter<W> {
                 if segment == "constant" {
                     let replaced_str = PUSH_CONST_AMS.replace("{}", &index.to_string());
                     self.f.write_all(replaced_str.as_bytes()).unwrap();
+                } else if segment == "static" {
+                    let replaced_str = PUSH_STATIC_AMS
+                        .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
+                    self.f.write_all(replaced_str.as_bytes()).unwrap();
                 }
             }
-            CommandType::C_POP => todo!(),
+            CommandType::C_POP => {
+                if segment == "static" {
+                    let replaced_str = POP_STATIC_AMS
+                        .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
+                    self.f.write_all(replaced_str.as_bytes()).unwrap();
+                }
+            }
             _ => {
                 panic!("not called this command type {:?}", command)
             }

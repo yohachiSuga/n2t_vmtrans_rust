@@ -137,3 +137,19 @@ M=M+1
 // M=D
 // @SP
 // M=M+1
+
+// push static 3
+@Xxx.3
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// pop static 3
+@SP
+AM=M-1
+D=M
+@Xxx.3
+M=D

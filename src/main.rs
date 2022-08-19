@@ -30,6 +30,10 @@ fn compile<W: Write>(inputs: Vec<String>, output: &mut CodeWriter<W>, debug: boo
     for f in inputs {
         let mut parser = parser::Parser::new(&f);
 
+        // to remove slash
+        let path = Path::new(&f);
+        output.setFileName(&path.file_name().unwrap().to_str().unwrap());
+
         loop {
             if !parser.has_next_cmd() {
                 break;
@@ -39,12 +43,11 @@ fn compile<W: Write>(inputs: Vec<String>, output: &mut CodeWriter<W>, debug: boo
 
             match parser.get_command_type() {
                 parser::CommandType::C_ARITHMETIC => output.writeArithmetic(parser.get_arg_1()),
-                parser::CommandType::C_PUSH => output.writePushPop(
+                parser::CommandType::C_PUSH | parser::CommandType::C_POP => output.writePushPop(
                     parser.get_command_type(),
                     parser.get_arg_1(),
                     parser.get_arg_2(),
                 ),
-                parser::CommandType::C_POP => todo!(),
                 parser::CommandType::C_LABEL => todo!(),
                 parser::CommandType::C_GOTO => todo!(),
                 parser::CommandType::C_IF => todo!(),
@@ -108,7 +111,7 @@ mod tests {
         {
             let mut writer = BufWriter::new(&mut actual);
             let mut writer = CodeWriter::new(writer);
-            compile(vec!["SimpleAdd.vm".to_string()], &mut writer);
+            compile(vec!["SimpleAdd.vm".to_string()], &mut writer, true);
         }
     }
 }

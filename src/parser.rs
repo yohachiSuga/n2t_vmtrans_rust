@@ -81,11 +81,10 @@ impl Parser {
                                     CommandType::C_ARITHMETIC => {
                                         self.arg1 = Some(vm_cmd[0].to_string());
                                     }
-                                    CommandType::C_PUSH => {
+                                    CommandType::C_PUSH | CommandType::C_POP => {
                                         self.arg1 = Some(vm_cmd[1].to_string());
                                         self.arg2 = Some(i64::from_str(vm_cmd[2]).unwrap());
                                     }
-                                    CommandType::C_POP => todo!(),
                                     CommandType::C_LABEL => todo!(),
                                     CommandType::C_GOTO => todo!(),
                                     CommandType::C_IF => todo!(),
