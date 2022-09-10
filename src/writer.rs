@@ -199,11 +199,110 @@ pub struct CodeWriter<W: std::io::Write> {
     filename: String,
 }
 
+fn generate_pop_specified_register_template(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
+// arg pointer to store address
+@{index}
+D=A
+@{reg_name}
+M=M+D
+
+@SP
+AM=M-1
+D=M
+@{reg_name}
+A=M
+M=D
+
+// arg pointer to base address
+@{index}
+D=A
+@{reg_name}
+M=M-D
+"###,
+    )
+}
+
+fn generate_pop_specified_register_template_2(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
+@{index}
+D=A
+@{reg_name}
+D=A+D
+@R13
+M=D
+
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+"###,
+    )
+}
+fn generate_push_specified_register_template_2(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
+@{index}
+D=A
+@{reg_name}
+D=A+D
+@R13
+M=D
+
+@R13
+A=M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+"###,
+    )
+}
+
+fn generate_push_specified_register_template(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
+// arg pointer to store address
+@{index}
+D=A
+@{reg_name}
+M=M+D
+
+@{reg_name}
+A=M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// arg pointer to base address
+@{index}
+D=A
+@{reg_name}
+M=M-D
+"###,
+    )
+}
+
 static INIT: &str = "
 // replace to 256
 @256
 D=A
 @SP
+M=D
+
+// set to ARG reg
+@400
+D=A
+@ARG
 M=D
 ";
 
@@ -301,6 +400,46 @@ impl<W: std::io::Write> CodeWriter<W> {
                     let replaced_str = PUSH_STATIC_AMS
                         .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
                     self.f.write_all(replaced_str.as_bytes()).unwrap();
+                } else if segment == "argument"
+                    || segment == "local"
+                    || segment == "this"
+                    || segment == "that"
+                {
+                    let register_name = {
+                        match segment {
+                            "argument" => "ARG",
+                            "local" => "LCL",
+                            "this" => "THIS",
+                            "that" => "THAT",
+                            _ => panic!("do not reach here"),
+                        }
+                    };
+                    self.f
+                        .write_all(
+                            generate_push_specified_register_template(
+                                index as usize,
+                                register_name,
+                            )
+                            .as_bytes(),
+                        )
+                        .unwrap();
+                } else if segment == "temp" || segment == "pointer" {
+                    let register_name = {
+                        match segment {
+                            "temp" => "5",
+                            "pointer" => "3",
+                            _ => panic!("do not reach here"),
+                        }
+                    };
+                    self.f
+                        .write_all(
+                            generate_push_specified_register_template_2(
+                                index as usize,
+                                register_name,
+                            )
+                            .as_bytes(),
+                        )
+                        .unwrap();
                 }
             }
             CommandType::C_POP => {
@@ -308,6 +447,43 @@ impl<W: std::io::Write> CodeWriter<W> {
                     let replaced_str = POP_STATIC_AMS
                         .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
                     self.f.write_all(replaced_str.as_bytes()).unwrap();
+                } else if segment == "argument"
+                    || segment == "local"
+                    || segment == "this"
+                    || segment == "that"
+                {
+                    let register_name = {
+                        match segment {
+                            "argument" => "ARG",
+                            "local" => "LCL",
+                            "this" => "THIS",
+                            "that" => "THAT",
+                            _ => panic!("do not reach here"),
+                        }
+                    };
+                    self.f
+                        .write_all(
+                            generate_pop_specified_register_template(index as usize, register_name)
+                                .as_bytes(),
+                        )
+                        .unwrap();
+                } else if segment == "temp" || segment == "pointer" {
+                    let register_name = {
+                        match segment {
+                            "temp" => "5",
+                            "pointer" => "3",
+                            _ => panic!("do not reach here"),
+                        }
+                    };
+                    self.f
+                        .write_all(
+                            generate_pop_specified_register_template_2(
+                                index as usize,
+                                register_name,
+                            )
+                            .as_bytes(),
+                        )
+                        .unwrap();
                 }
             }
             _ => {
