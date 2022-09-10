@@ -1,9 +1,12 @@
 use std::{
     fmt::format,
+    fs::File,
     io::{BufWriter, Write},
+    str::FromStr,
 };
 
 use crate::parser::CommandType;
+
 
 static ADD_ASM: &str = r"
 // pop to save register (AM=M-1, M=D+M)
@@ -202,35 +205,10 @@ pub struct CodeWriter<W: std::io::Write> {
 fn generate_pop_specified_register_template(index: usize, reg_name: &str) -> String {
     format!(
         r###"
-// arg pointer to store address
 @{index}
 D=A
 @{reg_name}
-M=M+D
-
-@SP
-AM=M-1
-D=M
-@{reg_name}
-A=M
-M=D
-
-// arg pointer to base address
-@{index}
-D=A
-@{reg_name}
-M=M-D
-"###,
-    )
-}
-
-fn generate_pop_specified_register_template_2(index: usize, reg_name: &str) -> String {
-    format!(
-        r###"
-@{index}
-D=A
-@{reg_name}
-D=A+D
+D=M+D
 @R13
 M=D
 
@@ -240,27 +218,7 @@ D=M
 @R13
 A=M
 M=D
-"###,
-    )
-}
-fn generate_push_specified_register_template_2(index: usize, reg_name: &str) -> String {
-    format!(
-        r###"
-@{index}
-D=A
-@{reg_name}
-D=A+D
-@R13
-M=D
 
-@R13
-A=M
-D=M
-@SP
-A=M
-M=D
-@SP
-M=M+1
 "###,
     )
 }
@@ -268,13 +226,14 @@ M=M+1
 fn generate_push_specified_register_template(index: usize, reg_name: &str) -> String {
     format!(
         r###"
-// arg pointer to store address
 @{index}
 D=A
 @{reg_name}
-M=M+D
+D=M+D
+@R13
+M=D
 
-@{reg_name}
+@R13
 A=M
 D=M
 @SP
@@ -283,11 +242,47 @@ M=D
 @SP
 M=M+1
 
-// arg pointer to base address
+"###,
+    )
+}
+
+fn generate_pop_specified_register_template_pointer(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
 @{index}
 D=A
 @{reg_name}
-M=M-D
+D=A+D
+@R13
+M=D
+
+@SP
+AM=M-1
+D=M
+@R13
+A=M
+M=D
+"###,
+    )
+}
+fn generate_push_specified_register_template_pointer(index: usize, reg_name: &str) -> String {
+    format!(
+        r###"
+@{index}
+D=A
+@{reg_name}
+D=A+D
+@R13
+M=D
+
+@R13
+A=M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
 "###,
     )
 }
@@ -305,6 +300,115 @@ D=A
 @ARG
 M=D
 ";
+
+#[derive(strum_macros::EnumString)]
+enum Segment {
+    #[strum(serialize = "constant")]
+    constant,
+    #[strum(serialize = "static")]
+    Static,
+    #[strum(serialize = "local")]
+    Local,
+    #[strum(serialize = "argument")]
+    Arg,
+    #[strum(serialize = "that")]
+    That,
+    #[strum(serialize = "this")]
+    This,
+    #[strum(serialize = "temp")]
+    Temp,
+    #[strum(serialize = "pointer")]
+    Pointer,
+}
+
+impl Segment {
+    fn write_push_asm<W>(&self, index: i64, f: &mut BufWriter<W>, label: Option<&str>)
+    where
+        W: std::io::Write,
+    {
+        match self {
+            Segment::constant => {
+                let replaced_str = PUSH_CONST_AMS.replace("{}", &index.to_string());
+                f.write_all(replaced_str.as_bytes()).unwrap();
+            }
+            Segment::Static => {
+                let replaced_str = PUSH_STATIC_AMS
+                    .replace("{}", &format!("{}.{}", label.unwrap(), &index.to_string()));
+                f.write_all(replaced_str.as_bytes()).unwrap();
+            }
+            Segment::Local | &Segment::Arg | Segment::That | Segment::This => {
+                f.write_all(
+                    generate_push_specified_register_template(
+                        index as usize,
+                        self.get_register_name(),
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+            }
+            Segment::Temp | Segment::Pointer => {
+                f.write_all(
+                    generate_push_specified_register_template_pointer(
+                        index as usize,
+                        self.get_register_name(),
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+            }
+        }
+    }
+
+    fn write_pop_asm<W>(&self, index: i64, f: &mut BufWriter<W>, label: Option<&str>)
+    where
+        W: std::io::Write,
+    {
+        match self {
+            Segment::constant => {
+                panic!("cannot pop constant")
+            }
+            Segment::Static => {
+                let replaced_str = POP_STATIC_AMS
+                    .replace("{}", &format!("{}.{}", label.unwrap(), &index.to_string()));
+                f.write_all(replaced_str.as_bytes()).unwrap();
+            }
+            Segment::Local | &Segment::Arg | Segment::That | Segment::This => {
+                f.write_all(
+                    generate_pop_specified_register_template(
+                        index as usize,
+                        self.get_register_name(),
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+            }
+            Segment::Temp | Segment::Pointer => {
+                f.write_all(
+                    generate_pop_specified_register_template_pointer(
+                        index as usize,
+                        self.get_register_name(),
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+            }
+        }
+    }
+
+    fn get_register_name(&self) -> &str {
+        match self {
+            Segment::constant => todo!(),
+            Segment::Static => todo!(),
+            Segment::Local => "LCL",
+            Segment::Arg => "ARG",
+            Segment::That => "THAT",
+            Segment::This => "THIS",
+            Segment::Temp => "5",
+            Segment::Pointer => "3",
+        }
+    }
+}
+
 
 impl<W: std::io::Write> CodeWriter<W> {
     pub fn new(output: BufWriter<W>) -> CodeWriter<W> {
@@ -391,100 +495,13 @@ impl<W: std::io::Write> CodeWriter<W> {
     }
 
     pub fn writePushPop(&mut self, command: &CommandType, segment: &str, index: i64) {
+        let seg = Segment::from_str(segment).unwrap();
         match command {
             CommandType::C_PUSH => {
-                if segment == "constant" {
-                    let replaced_str = PUSH_CONST_AMS.replace("{}", &index.to_string());
-                    self.f.write_all(replaced_str.as_bytes()).unwrap();
-                } else if segment == "static" {
-                    let replaced_str = PUSH_STATIC_AMS
-                        .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
-                    self.f.write_all(replaced_str.as_bytes()).unwrap();
-                } else if segment == "argument"
-                    || segment == "local"
-                    || segment == "this"
-                    || segment == "that"
-                {
-                    let register_name = {
-                        match segment {
-                            "argument" => "ARG",
-                            "local" => "LCL",
-                            "this" => "THIS",
-                            "that" => "THAT",
-                            _ => panic!("do not reach here"),
-                        }
-                    };
-                    self.f
-                        .write_all(
-                            generate_push_specified_register_template(
-                                index as usize,
-                                register_name,
-                            )
-                            .as_bytes(),
-                        )
-                        .unwrap();
-                } else if segment == "temp" || segment == "pointer" {
-                    let register_name = {
-                        match segment {
-                            "temp" => "5",
-                            "pointer" => "3",
-                            _ => panic!("do not reach here"),
-                        }
-                    };
-                    self.f
-                        .write_all(
-                            generate_push_specified_register_template_2(
-                                index as usize,
-                                register_name,
-                            )
-                            .as_bytes(),
-                        )
-                        .unwrap();
-                }
+                seg.write_push_asm(index, &mut self.f, Some(&self.filename));
             }
             CommandType::C_POP => {
-                if segment == "static" {
-                    let replaced_str = POP_STATIC_AMS
-                        .replace("{}", &format!("{}.{}", self.filename, &index.to_string()));
-                    self.f.write_all(replaced_str.as_bytes()).unwrap();
-                } else if segment == "argument"
-                    || segment == "local"
-                    || segment == "this"
-                    || segment == "that"
-                {
-                    let register_name = {
-                        match segment {
-                            "argument" => "ARG",
-                            "local" => "LCL",
-                            "this" => "THIS",
-                            "that" => "THAT",
-                            _ => panic!("do not reach here"),
-                        }
-                    };
-                    self.f
-                        .write_all(
-                            generate_pop_specified_register_template(index as usize, register_name)
-                                .as_bytes(),
-                        )
-                        .unwrap();
-                } else if segment == "temp" || segment == "pointer" {
-                    let register_name = {
-                        match segment {
-                            "temp" => "5",
-                            "pointer" => "3",
-                            _ => panic!("do not reach here"),
-                        }
-                    };
-                    self.f
-                        .write_all(
-                            generate_pop_specified_register_template_2(
-                                index as usize,
-                                register_name,
-                            )
-                            .as_bytes(),
-                        )
-                        .unwrap();
-                }
+                seg.write_pop_asm(index, &mut self.f, Some(&self.filename));
             }
             _ => {
                 panic!("not called this command type {:?}", command)
