@@ -9,6 +9,7 @@ use log::{debug, info};
 use writer::CodeWriter;
 
 mod parser;
+mod template;
 mod writer;
 
 #[derive(Parser, Debug)]
