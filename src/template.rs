@@ -102,34 +102,7 @@ D=M
 M=D
 ";
 
-pub static EQ_CONST_ASM: &str = "
-@SP
-AM=M-1
-D=M
-@SP
-AM=M-1
-
-D=D-M
-@RETURNTRUE
-D;JEQ
-@RETURNFALSE
-D;JNE
-
-(RETURNTRUE)
-D=-1
-@RETURNEND
-0;JMP
-(RETURNFALSE)
-D=0
-(RETURNEND)
-@SP
-A=M
-M=D
-@SP
-M=M+1
-";
-
-pub static LT_CONST_ASM: &str = "
+pub static CMP_CONST_ASM: &str = "
 @SP
 AM=M-1
 D=M
@@ -138,36 +111,9 @@ AM=M-1
 
 D=M-D
 @RETURNTRUE
-D;JLT
+D;TRUECMPLABEL
 @RETURNFALSE
-D;JGE
-
-(RETURNTRUE)
-D=-1
-@RETURNEND
-0;JMP
-(RETURNFALSE)
-D=0
-(RETURNEND)
-@SP
-A=M
-M=D
-@SP
-M=M+1
-";
-
-pub static GT_CONST_ASM: &str = "
-@SP
-AM=M-1
-D=M
-@SP
-AM=M-1
-
-D=M-D
-@RETURNTRUE
-D;JGT
-@RETURNFALSE
-D;JLE
+D;FALSECMPLABEL
 
 (RETURNTRUE)
 D=-1
@@ -186,6 +132,8 @@ M=M+1
 pub static RET_TRUE_LABEL: &str = "RETURNTRUE";
 pub static RET_FALSE_LABEL: &str = "RETURNFALSE";
 pub static RET_END_LABEL: &str = "RETURNEND";
+pub static TRUE_CMP_LABEL: &str = "TRUECMPLABEL";
+pub static FALSE_CMP_LABEL: &str = "FALSECMPLABEL";
 
 pub fn generate_pop_specified_register_template(index: usize, reg_name: &str) -> String {
     format!(

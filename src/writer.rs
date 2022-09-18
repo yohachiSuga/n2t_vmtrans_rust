@@ -1,6 +1,4 @@
 use std::{
-    fmt::format,
-    fs::File,
     io::{BufWriter, Write},
     str::FromStr,
 };
@@ -10,9 +8,9 @@ use crate::{
     template::{
         generate_pop_specified_register_template, generate_pop_specified_register_template_pointer,
         generate_push_specified_register_template,
-        generate_push_specified_register_template_pointer, ADD_ASM, AND_ASM, EQ_CONST_ASM,
-        GT_CONST_ASM, INIT, LT_CONST_ASM, NEG_ASM, NOT_ASM, OR_ASM, POP_STATIC_AMS, PUSH_CONST_AMS,
-        PUSH_STATIC_AMS, RET_END_LABEL, RET_FALSE_LABEL, RET_TRUE_LABEL, SUB_ASM,
+        generate_push_specified_register_template_pointer, ADD_ASM, AND_ASM, CMP_CONST_ASM,
+        FALSE_CMP_LABEL, INIT, NEG_ASM, NOT_ASM, OR_ASM, POP_STATIC_AMS, PUSH_CONST_AMS,
+        PUSH_STATIC_AMS, RET_END_LABEL, RET_FALSE_LABEL, RET_TRUE_LABEL, SUB_ASM, TRUE_CMP_LABEL,
     },
 };
 
@@ -147,14 +145,15 @@ impl<W: std::io::Write> CodeWriter<W> {
         self.f.write_all(INIT.as_bytes()).unwrap();
     }
 
-    fn replace_logical_op(
-        &self,
-        true_label: &str,
-        false_label: &str,
-        end_label: &str,
-        command: &str,
-        template: &str,
-    ) -> String {
+    fn generate_cmp_template(&mut self, command: &str) -> String {
+        self.logical_op_count += 1;
+        let template = CMP_CONST_ASM;
+        let true_label = RET_TRUE_LABEL;
+        let false_label = RET_FALSE_LABEL;
+        let end_label = RET_END_LABEL;
+        let true_cmp_label = TRUE_CMP_LABEL;
+        let false_cmp_label = FALSE_CMP_LABEL;
+
         let mut replaced_true = true_label.to_string();
         replaced_true.push_str(&format!("_{}_{}", command, self.logical_op_count));
         let mut replaced_false = false_label.to_string();
@@ -162,10 +161,24 @@ impl<W: std::io::Write> CodeWriter<W> {
         let mut replaced_end = end_label.to_string();
         replaced_end.push_str(&format!("_{}_{}", command, self.logical_op_count));
 
+        let (true_cmp, false_cmp) = {
+            if command == "eq" {
+                ("JEQ", "JNE")
+            } else if command == "lt" {
+                ("JLT", "JGE")
+            } else if command == "gt" {
+                ("JGT", "JLE")
+            } else {
+                panic!("not supported command {}", command)
+            }
+        };
+
         template
             .replace(true_label, &replaced_true)
             .replace(false_label, &replaced_false)
             .replace(end_label, &replaced_end)
+            .replace(true_cmp_label, true_cmp)
+            .replace(false_cmp_label, false_cmp)
     }
 
     pub fn writeArithmetic(&mut self, command: &str) {
@@ -181,36 +194,9 @@ impl<W: std::io::Write> CodeWriter<W> {
             self.f.write_all(OR_ASM.as_bytes()).unwrap();
         } else if command == "not" {
             self.f.write_all(NOT_ASM.as_bytes()).unwrap();
-        } else if command == "eq" {
-            self.logical_op_count += 1;
-            let replaced_eq_asm = self.replace_logical_op(
-                RET_TRUE_LABEL,
-                RET_FALSE_LABEL,
-                RET_END_LABEL,
-                command,
-                EQ_CONST_ASM,
-            );
-            self.f.write_all(replaced_eq_asm.as_bytes()).unwrap();
-        } else if command == "lt" {
-            self.logical_op_count += 1;
-            let replaced_eq_asm = self.replace_logical_op(
-                RET_TRUE_LABEL,
-                RET_FALSE_LABEL,
-                RET_END_LABEL,
-                command,
-                LT_CONST_ASM,
-            );
-            self.f.write_all(replaced_eq_asm.as_bytes()).unwrap();
-        } else if command == "gt" {
-            self.logical_op_count += 1;
-            let replaced_eq_asm = self.replace_logical_op(
-                RET_TRUE_LABEL,
-                RET_FALSE_LABEL,
-                RET_END_LABEL,
-                command,
-                GT_CONST_ASM,
-            );
-            self.f.write_all(replaced_eq_asm.as_bytes()).unwrap();
+        } else {
+            let cmp_asm = self.generate_cmp_template(command);
+            self.f.write_all(cmp_asm.as_bytes()).unwrap();
         }
     }
 
