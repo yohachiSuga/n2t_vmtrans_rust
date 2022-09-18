@@ -37,11 +37,17 @@ pub enum CommandType {
     C_PUSH,
     #[strum(serialize = "pop")]
     C_POP,
+    #[strum(serialize = "label")]
     C_LABEL,
+    #[strum(serialize = "goto")]
     C_GOTO,
+    #[strum(serialize = "if-goto")]
     C_IF,
+    #[strum(serialize = "function")]
     C_FUNCTION,
+    #[strum(serialize = "return")]
     C_RETURN,
+    #[strum(serialize = "label")]
     C_CALL,
 }
 
@@ -85,11 +91,13 @@ impl Parser {
                                         self.arg1 = Some(vm_cmd[1].to_string());
                                         self.arg2 = Some(i64::from_str(vm_cmd[2]).unwrap());
                                     }
-                                    CommandType::C_LABEL => todo!(),
-                                    CommandType::C_GOTO => todo!(),
-                                    CommandType::C_IF => todo!(),
-                                    CommandType::C_FUNCTION => todo!(),
+                                    CommandType::C_LABEL
+                                    | CommandType::C_GOTO
+                                    | CommandType::C_IF => {
+                                        self.arg1 = Some(vm_cmd[1].to_string());
+                                    }
                                     CommandType::C_RETURN => todo!(),
+                                    CommandType::C_FUNCTION => todo!(),
                                     CommandType::C_CALL => todo!(),
                                 }
                             }
@@ -180,5 +188,23 @@ mod tests {
         parser.get_command_type();
         assert_eq!(&CommandType::C_ARITHMETIC, parser.get_command_type());
         assert_eq!("eq", parser.get_arg_1());
+    }
+
+    #[test]
+    fn work_test_label() {
+        env_logger::init();
+
+        let mut parser = Parser::new("BasicLoop.vm");
+        parser.advance();
+        parser.has_next_cmd();
+
+        parser.advance();
+        parser.has_next_cmd();
+
+        parser.advance();
+        parser.has_next_cmd();
+        parser.get_command_type();
+        assert_eq!(&CommandType::C_LABEL, parser.get_command_type());
+        assert_eq!("LOOP_START", parser.get_arg_1());
     }
 }

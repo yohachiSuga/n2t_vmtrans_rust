@@ -9,8 +9,9 @@ use crate::{
         generate_pop_specified_register_template, generate_pop_specified_register_template_pointer,
         generate_push_specified_register_template,
         generate_push_specified_register_template_pointer, ADD_ASM, AND_ASM, CMP_CONST_ASM,
-        FALSE_CMP_LABEL, INIT, NEG_ASM, NOT_ASM, OR_ASM, POP_STATIC_AMS, PUSH_CONST_AMS,
-        PUSH_STATIC_AMS, RET_END_LABEL, RET_FALSE_LABEL, RET_TRUE_LABEL, SUB_ASM, TRUE_CMP_LABEL,
+        DEF_LABEL_AMS, FALSE_CMP_LABEL, GOTO_LABEL_AMS, IFGOTO_LABEL_AMS, INIT, LABEL_NAME,
+        NEG_ASM, NOT_ASM, OR_ASM, POP_STATIC_AMS, PUSH_CONST_AMS, PUSH_STATIC_AMS, RET_END_LABEL,
+        RET_FALSE_LABEL, RET_TRUE_LABEL, SUB_ASM, TRUE_CMP_LABEL,
     },
 };
 
@@ -213,6 +214,19 @@ impl<W: std::io::Write> CodeWriter<W> {
                 panic!("not called this command type {:?}", command)
             }
         }
+    }
+
+    pub fn writeLabel(&mut self, command: &CommandType, label: &str) {
+        let asm = DEF_LABEL_AMS.replace(LABEL_NAME, label);
+        self.f.write_all(asm.as_bytes()).unwrap();
+    }
+    pub fn writeGoto(&mut self, command: &CommandType, label: &str) {
+        let asm = GOTO_LABEL_AMS.replace(LABEL_NAME, label);
+        self.f.write_all(asm.as_bytes()).unwrap();
+    }
+    pub fn writeIf(&mut self, command: &CommandType, label: &str) {
+        let asm = IFGOTO_LABEL_AMS.replace(LABEL_NAME, label);
+        self.f.write_all(asm.as_bytes()).unwrap();
     }
 }
 

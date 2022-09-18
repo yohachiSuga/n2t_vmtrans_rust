@@ -49,9 +49,15 @@ fn compile<W: Write>(inputs: Vec<String>, output: &mut CodeWriter<W>, debug: boo
                     parser.get_arg_1(),
                     parser.get_arg_2(),
                 ),
-                parser::CommandType::C_LABEL => todo!(),
-                parser::CommandType::C_GOTO => todo!(),
-                parser::CommandType::C_IF => todo!(),
+                parser::CommandType::C_LABEL => {
+                    output.writeLabel(parser.get_command_type(), parser.get_arg_1())
+                }
+                parser::CommandType::C_GOTO=> {
+                    output.writeGoto(parser.get_command_type(), parser.get_arg_1())
+                }
+                parser::CommandType::C_IF=> {
+                    output.writeIf(parser.get_command_type(), parser.get_arg_1())
+                }
                 parser::CommandType::C_FUNCTION => todo!(),
                 parser::CommandType::C_RETURN => todo!(),
                 parser::CommandType::C_CALL => todo!(),

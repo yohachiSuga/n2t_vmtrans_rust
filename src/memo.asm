@@ -17,27 +17,27 @@ M=D
 @SP
 M=M+1
 
-// push constant
-@8
-D=A
-@SP
-A=M
-M=D
-@SP
-M=M+1
+// // push constant
+// @8
+// D=A
+// @SP
+// A=M
+// M=D
+// @SP
+// M=M+1
 
-// and
-// pop to save register (AM=M-1, M=D+M)
-@SP
-AM=M-1
-D=M
-// pop
-@SP
-AM=M-1
-// and
-M=M&D
-@SP
-M=M+1
+// // and
+// // pop to save register (AM=M-1, M=D+M)
+// @SP
+// AM=M-1
+// D=M
+// // pop
+// @SP
+// AM=M-1
+// // and
+// M=M&D
+// @SP
+// M=M+1
 
 
 
@@ -138,8 +138,57 @@ M=M+1
 // @SP
 // M=M+1
 
-// push static 3
-@Xxx.3
+// // push static 3
+// @Xxx.3
+// D=M
+// @SP
+// A=M
+// M=D
+// @SP
+// M=M+1
+
+// // pop static 3
+// @SP
+// AM=M-1
+// D=M
+// @Xxx.3
+// M=D
+
+// init
+@400
+D=A
+@ARG
+M=D
+
+// pop argument 2
+// arg pointer to store address
+@2
+D=A
+@ARG
+M=M+D
+
+@SP
+AM=M-1
+D=M
+@ARG
+A=M
+M=D
+
+// arg pointer to base address
+@2
+D=A
+@ARG
+M=M-D
+
+// push argument 2
+// arg pointer to store address
+@2
+D=A
+@ARG
+M=M+D
+
+@ARG
+A=M
 D=M
 @SP
 A=M
@@ -147,9 +196,66 @@ M=D
 @SP
 M=M+1
 
-// pop static 3
+
+// arg pointer to base address
+@2
+D=A
+@ARG
+M=M-D
+
+// push argument 2
+// arg pointer to store address
+@2
+D=A
+@5
+M=M+D
+
+@5
+A=M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+
+// arg pointer to base address
+@2
+D=A
+@5
+M=M-D
+
+
+// push pointer 1
+// arg pointer to store address
+@1
+D=A
+@3
+D=M+D
+@R13
+A=D
+
+@R13
+A=M
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+
+// label XXX
+(XXX)
+
+// goto XXX
+@XXX
+0;JMP
+
+// if-goto XXX
 @SP
 AM=M-1
 D=M
-@Xxx.3
-M=D
+@XXX
+D;JEQ

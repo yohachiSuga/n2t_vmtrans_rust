@@ -233,3 +233,22 @@ D=A
 @ARG
 M=D
 ";
+
+pub static DEF_LABEL_AMS: &str = "
+(LABEL_NAME)
+";
+
+pub static GOTO_LABEL_AMS: &str = "
+@LABEL_NAME
+0;JMP
+";
+
+pub static IFGOTO_LABEL_AMS: &str = "
+@SP
+AM=M-1
+D=M
+@LABEL_NAME
+D;JNE
+";
+
+pub static LABEL_NAME: &str = "LABEL_NAME";

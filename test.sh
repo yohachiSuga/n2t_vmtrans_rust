@@ -21,3 +21,20 @@ do
     $BIN_PATH -i ./$test_case.vm -o ../07/MemoryAccess/$test_case/$test_case.asm
     $CPUEmulatorPath ../07/MemoryAccess/$test_case/$test_case.tst
 done
+
+TEST_NAME=("BasicLoop" "FibonacciSeries")
+for test_case in "${TEST_NAME[@]}"
+do
+    echo "###### TEST_CASE: $test_case #######"
+    $BIN_PATH -i ./$test_case.vm -o ../08/ProgramFlow/$test_case/$test_case.asm
+    $CPUEmulatorPath ../08/ProgramFlow/$test_case/$test_case.tst
+done
+
+TEST_NAME=("SimpleFunction")
+for test_case in "${TEST_NAME[@]}"
+do
+    echo "###### TEST_CASE: $test_case #######"
+    $BIN_PATH -i ./$test_case.vm -o ../08/FunctionCalls/$test_case/$test_case.asm
+    $CPUEmulatorPath ../08/FunctionCalls/$test_case/$test_case.tst
+done
+
